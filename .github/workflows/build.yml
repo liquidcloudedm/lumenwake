@@ -46,7 +46,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p dump
-          LUMENWAKE_DUMP="$PWD/dump" dist-mac/Lumenwake.app/Contents/MacOS/Lumenwake &
+          LUMENWAKE_DUMP_FRAMES=6 LUMENWAKE_DUMP="$PWD/dump" dist-mac/Lumenwake.app/Contents/MacOS/Lumenwake &
           pid=$!
           for i in $(seq 1 400); do
             [ -f dump/done.txt ] && break

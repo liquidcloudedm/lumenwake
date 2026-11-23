@@ -1125,7 +1125,12 @@ void VisualRenderer::stepDump (int width, int height, juce::uint32 framebuffer)
     if (dumpIndex >= (int) dumpItems.size())
         return;
 
-    if (++dumpFrame < 70)
+    // Frames drawn before each picture is taken. LUMENWAKE_DUMP_FRAMES lowers
+    // it for machines without a real graphics card, which draw very slowly.
+    static const int framesPerPicture = juce::jlimit (2, 600,
+        juce::SystemStats::getEnvironmentVariable ("LUMENWAKE_DUMP_FRAMES", "70").getIntValue());
+
+    if (++dumpFrame < framesPerPicture)
         return;
 
     dumpFrame = 0;
