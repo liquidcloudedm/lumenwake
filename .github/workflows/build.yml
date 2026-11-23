@@ -236,13 +236,18 @@ jobs:
 
       - name: Publish
         run: |
-          test -f "packages/Lumenwake $VERSION (Mac).zip"
-          test -f "packages/Lumenwake $VERSION (Windows VST3).zip"
-          test -f "packages/Lumenwake $VERSION (Windows standalone).zip"
+          # GitHub swaps the spaces in a file name for dots. The text after the
+          # "#" is the name shown on the release page, so that one reads properly.
+          files=()
+          for kind in "Mac" "Windows VST3" "Windows standalone"; do
+            name="Lumenwake $VERSION ($kind).zip"
+            test -f "packages/$name"
+            files+=("packages/$name#$name")
+          done
 
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Lumenwake $VERSION" --notes-file notes.md
-            gh release upload "$GITHUB_REF_NAME" packages/*.zip --clobber
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" packages/*.zip --verify-tag --title "Lumenwake $VERSION" --notes-file notes.md
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" --verify-tag --title "Lumenwake $VERSION" --notes-file notes.md
           fi
