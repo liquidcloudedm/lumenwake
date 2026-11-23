@@ -40,6 +40,39 @@ jobs:
           killall -9 AudioComponentRegistrar 2>/dev/null || true
           auval -v aufx Lmw1 Lmwk
 
+      # The two checks below draw pictures. The hosted Macs only have a virtual
+      # graphics card, so a failure here does not fail the build; read the log.
+      - name: Render every scene
+        continue-on-error: true
+        run: |
+          mkdir -p dump
+          LUMENWAKE_DUMP="$PWD/dump" dist-mac/Lumenwake.app/Contents/MacOS/Lumenwake &
+          pid=$!
+          for i in $(seq 1 400); do
+            [ -f dump/done.txt ] && break
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          kill "$pid" 2>/dev/null || true
+          ls -l dump
+          cat dump/done.txt || echo "The self-test did not finish."
+          if [ -f dump/shader_errors.txt ]; then cat dump/shader_errors.txt; exit 1; fi
+          [ -f dump/done.txt ]
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Lumenwake-mac-renders
+          path: dump
+          if-no-files-found: ignore
+
+      - name: Load the VST3 in a test host
+        continue-on-error: true
+        run: |
+          cmake -S . -B build-test -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DLUMENWAKE_BUILD_TESTS=ON
+          cmake --build build-test --target lw_hosttest -j "$(sysctl -n hw.ncpu)"
+          "$(find build-test/lw_hosttest_artefacts -type f -name lw_hosttest | head -n 1)" "$PWD/dist-mac/Lumenwake.vst3"
+
   windows:
     name: Windows (VST3, standalone)
     # Only for a version tag: a run started by hand builds the Mac plugins alone.
