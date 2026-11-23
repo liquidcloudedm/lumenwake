@@ -146,7 +146,7 @@ jobs:
         shell: bash
         run: |
           cmake -S . -B build -A x64 -DLUMENWAKE_BUILD_TESTS=ON
-          cmake --build build --config Release --target Lumenwake_VST3 Lumenwake_Standalone lw_hosttest
+          cmake --build build --config Release --parallel --target Lumenwake_VST3 Lumenwake_Standalone lw_hosttest
 
       # Two packages: the plugin with its install notes, and the standalone app.
       - name: Zip
