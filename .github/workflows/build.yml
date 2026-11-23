@@ -1,11 +1,22 @@
 # Builds Lumenwake for Mac and Windows on GitHub's machines, so a Mac build
-# can be made without owning a Mac. Push this project to a GitHub repository,
-# open the Actions tab, pick "Build plugins" and press "Run workflow". The
-# plugins are attached to the finished run as downloadable zips.
+# can be made without owning a Mac.
+#
+# By hand: open the Actions tab, pick "Build plugins" and press "Run workflow".
+# The packages are attached to the finished run as downloadable zips.
+#
+# For a release: push a tag named after the version in CMakeLists.txt, such as
+# v0.3.0. Both platforms are built and a GitHub release is made for the tag,
+# with every package attached and the notes taken from CHANGELOG.md.
 name: Build plugins
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: What to build
+        type: choice
+        default: mac
+        options: [mac, windows, both]
   push:
     tags: ['v*']
 
@@ -13,9 +24,37 @@ env:
   JUCE_TAG: 9.0.6
 
 jobs:
+  # The version is written in one place, CMakeLists.txt. A tag has to agree
+  # with it, so a release can never carry plugins that report another version.
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      number: ${{ steps.read.outputs.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: read
+        run: |
+          number="$(sed -n 's/^project(Lumenwake VERSION \([0-9][0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [ -z "$number" ]; then
+            echo "No version found in CMakeLists.txt"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$number" ]; then
+            echo "The tag $GITHUB_REF_NAME does not match version $number in CMakeLists.txt"
+            exit 1
+          fi
+          echo "Lumenwake $number"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
   mac:
     name: Mac (VST3, AU, standalone)
+    needs: version
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'windows'
     runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,12 +66,12 @@ jobs:
       # the file permissions the app needs.
       - name: Zip
         run: |
-          pkg="Lumenwake 0.3.0 (Mac)"
+          pkg="Lumenwake $VERSION (Mac)"
           mkdir -p "$pkg"
           for name in Lumenwake.vst3 Lumenwake.component Lumenwake.app; do
             ditto "dist-mac/$name" "$pkg/$name"
           done
-          cp packaging/README-mac.txt "$pkg/README.txt"
+          sed "1s/LUMENWAKE [0-9.]*/LUMENWAKE $VERSION/" packaging/README-mac.txt > "$pkg/README.txt"
           cp -R packaging/Licences "$pkg/Licences"
           codesign --verify --deep --strict "$pkg/Lumenwake.vst3" "$pkg/Lumenwake.component" "$pkg/Lumenwake.app"
           ditto -c -k --keepParent "$pkg" "$pkg.zip"
@@ -41,7 +80,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Lumenwake-mac
-          path: Lumenwake 0.3.0 (Mac).zip
+          path: Lumenwake ${{ needs.version.outputs.number }} (Mac).zip
 
       # After the upload, so a failed check still leaves the build to download.
       - name: Check the Audio Unit
@@ -86,9 +125,13 @@ jobs:
 
   windows:
     name: Windows (VST3, standalone)
-    # Only for a version tag: a run started by hand builds the Mac plugins alone.
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: version
+    # For a version tag, or when asked for: a run started by hand builds the
+    # Mac plugins alone unless told otherwise.
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'mac'
     runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -105,14 +148,101 @@ jobs:
           cmake -S . -B build -A x64 -DLUMENWAKE_BUILD_TESTS=ON
           cmake --build build --config Release --target Lumenwake_VST3 Lumenwake_Standalone lw_hosttest
 
-      - name: Load the plugin in a test host
+      # Two packages: the plugin with its install notes, and the standalone app.
+      - name: Zip
         shell: bash
-        run: build/lw_hosttest_artefacts/Release/lw_hosttest.exe "build/Lumenwake_artefacts/Release/VST3/Lumenwake.vst3"
-        continue-on-error: true      # the hosted machines have no graphics card, so the window may not open
+        run: |
+          out=build/Lumenwake_artefacts/Release
+          pkg="Lumenwake $VERSION"
+
+          mkdir -p "package/$pkg"
+          cp -R "$out/VST3/Lumenwake.vst3" "package/$pkg/Lumenwake.vst3"
+          sed "1s/LUMENWAKE [0-9.]*/LUMENWAKE $VERSION/" packaging/README-windows.txt > "package/$pkg/README.txt"
+          cp -R packaging/Licences "package/$pkg/Licences"
+          (cd package && 7z a -tzip -mx=9 "../Lumenwake $VERSION (Windows VST3).zip" "$pkg")
+
+          mkdir -p "standalone/$pkg"
+          cp "$out/Standalone/Lumenwake.exe" "standalone/$pkg/Lumenwake.exe"
+          cp -R packaging/Licences "standalone/$pkg/Licences"
+          (cd standalone && 7z a -tzip -mx=9 "../Lumenwake $VERSION (Windows standalone).zip" "$pkg")
+
+          ls -l *.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: Lumenwake-windows
           path: |
-            build/Lumenwake_artefacts/Release/VST3/Lumenwake.vst3
-            build/Lumenwake_artefacts/Release/Standalone/Lumenwake.exe
+            Lumenwake ${{ needs.version.outputs.number }} (Windows VST3).zip
+            Lumenwake ${{ needs.version.outputs.number }} (Windows standalone).zip
+
+      # After the upload, so a failed check still leaves the build to download.
+      # The hosted machines have no graphics card, so the window may not open.
+      - name: Load the plugin in a test host
+        shell: bash
+        continue-on-error: true
+        run: build/lw_hosttest_artefacts/Release/lw_hosttest.exe "build/Lumenwake_artefacts/Release/VST3/Lumenwake.vst3"
+
+  # Only for a version tag: a GitHub release with every package attached.
+  release:
+    name: GitHub release
+    needs: [version, mac, windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.number }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Lumenwake-mac
+          path: packages
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Lumenwake-windows
+          path: packages
+
+      # The notes are this version's section of CHANGELOG.md, then what each file is.
+      - name: Write the notes
+        run: |
+          awk -v v="$VERSION" '
+            /^## / { on = ($2 == v); next }
+            on     { print }
+          ' CHANGELOG.md > notes.md
+
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
+
+          {
+            echo
+            echo "### Files"
+            echo
+            echo "- **Lumenwake $VERSION (Mac).zip**: VST3, Audio Unit and standalone app, for Apple Silicon and Intel."
+            echo "- **Lumenwake $VERSION (Windows VST3).zip**: the VST3 plugin for 64-bit Windows."
+            echo "- **Lumenwake $VERSION (Windows standalone).zip**: the standalone app for 64-bit Windows."
+            echo
+            echo "Each plugin package has a README with install steps."
+          } >> notes.md
+
+          cat notes.md
+          ls -l packages
+
+      - name: Publish
+        run: |
+          test -f "packages/Lumenwake $VERSION (Mac).zip"
+          test -f "packages/Lumenwake $VERSION (Windows VST3).zip"
+          test -f "packages/Lumenwake $VERSION (Windows standalone).zip"
+
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "Lumenwake $VERSION" --notes-file notes.md
+            gh release upload "$GITHUB_REF_NAME" packages/*.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" packages/*.zip --verify-tag --title "Lumenwake $VERSION" --notes-file notes.md
+          fi

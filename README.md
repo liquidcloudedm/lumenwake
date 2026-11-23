@@ -117,9 +117,9 @@ bash build-mac.sh
 
 It fetches JUCE, builds `Lumenwake.vst3`, `Lumenwake.component` (the Audio Unit) and `Lumenwake.app` as universal binaries for Apple Silicon and Intel (macOS 11 or later), and puts them in `dist-mac/`. `bash build-mac.sh install` also copies the plugins into `~/Library/Audio/Plug-Ins` and runs Apple's `auval` check on the Audio Unit.
 
-Without a Mac, `.github/workflows/build.yml` does the same on GitHub's Mac machines: push the project to a GitHub repository, open Actions, run "Build plugins", and download `Lumenwake-mac` from the finished run.
+Without a Mac, `.github/workflows/build.yml` does the same on GitHub's Mac machines: push the project to a GitHub repository, open Actions, run "Build plugins", and download `Lumenwake-mac` from the finished run. The "What to build" choice on that button also builds the Windows packages there.
 
-What has been checked on GitHub's Mac machines, for version 0.2.0: all three build as universal binaries, the Audio Unit passes Apple's `auval`, the VST3 loads in the test host (`lw_hosttest`: pass-through, parameters, state, editor), and the standalone app draws all 24 scenes and modes with no shader errors. The finished run holds a zip, `Lumenwake <version> (Mac).zip`, with the plugins, install notes (`packaging/README-mac.txt`) and licences. What has not been checked: the Mac build has not been used in Ableton Live or any other real host, by a person, on a real Mac, and recording has not been tried there. The effect switches added in 0.3.0 have been built and tested on Windows; run "Build plugins" again to repeat the Mac checks with them.
+What has been checked on GitHub's Mac machines, for versions 0.2.0 and 0.3.0: all three build as universal binaries, the Audio Unit passes Apple's `auval`, the VST3 loads in the test host (`lw_hosttest`: pass-through, parameters, the effect switches from 0.3.0 on, state, editor), and the standalone app draws all 24 scenes and modes with no shader errors. The finished run holds a zip, `Lumenwake <version> (Mac).zip`, with the plugins, install notes (`packaging/README-mac.txt`) and licences. What has not been checked: the Mac build has not been used in Ableton Live or any other real host, by a person, on a real Mac, and recording has not been tried there.
 
 Giving a Mac build to other people: macOS blocks plugins that are not signed with an Apple Developer ID and notarised (Apple Developer Program, paid yearly). Without that, each person has to clear the block once after copying the plugin, in Terminal:
 
@@ -129,6 +129,15 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/Lumenwake.com
 ```
 
 **VST2.** The older VST format (a `.dll` on Windows, a `.vst` on a Mac) can only be built with Steinberg's VST 2.4 SDK. JUCE does not include it, and Steinberg stopped licensing it in 2018, so it cannot be built or distributed here. If you already hold the SDK and a signed agreement from before then, add `-DLUMENWAKE_VST2_SDK=<path to the SDK>` to the cmake line and a `Lumenwake_VST` target appears. Ableton Live and every other current host load VST3.
+
+## Releases
+
+Every new minor or major version (0.2.0, 0.3.0, 1.0.0) gets a GitHub release with all the formats attached. To make one:
+
+1. Set the version in `CMakeLists.txt` and add a section for it to `CHANGELOG.md`.
+2. Push a tag named after the version: `git tag v0.3.0`, then `git push origin v0.3.0`.
+
+"Build plugins" then builds both platforms and publishes the release, with that section of `CHANGELOG.md` as its notes and three files: `Lumenwake <version> (Mac).zip` (VST3, Audio Unit, standalone app), `Lumenwake <version> (Windows VST3).zip` and `Lumenwake <version> (Windows standalone).zip`. A tag that does not match the version in `CMakeLists.txt` stops the run before anything is built.
 
 ## Tests
 
