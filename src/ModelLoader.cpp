@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <limits>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -79,6 +81,107 @@ struct TextCursor
             return false;
 
         p = r.ptr;
+        return true;
+    }
+
+    /** Decimal numbers are read by hand: the Mac standard library only has
+        std::from_chars for floating point from macOS 26 on, and strtod needs
+        a terminated string and follows the locale. */
+    bool read (double& out) noexcept
+    {
+        const auto isDigit = [] (char c) noexcept { return c >= '0' && c <= '9'; };
+
+        const char* s = p;
+        bool negative = false;
+
+        if (s < end && (*s == '+' || *s == '-'))
+            negative = (*s++ == '-');
+
+        uint64_t mantissa = 0;
+        int digits = 0, scale = 0;
+        bool any = false;
+
+        for (; s < end && isDigit (*s); ++s)
+        {
+            any = true;
+
+            if (digits < 19)
+            {
+                mantissa = mantissa * 10 + (uint64_t) (*s - '0');
+                digits += mantissa != 0 ? 1 : 0;
+            }
+            else
+            {
+                ++scale;
+            }
+        }
+
+        if (s < end && *s == '.')
+        {
+            for (++s; s < end && isDigit (*s); ++s)
+            {
+                any = true;
+
+                if (digits < 19)
+                {
+                    mantissa = mantissa * 10 + (uint64_t) (*s - '0');
+                    digits += mantissa != 0 ? 1 : 0;
+                    --scale;
+                }
+            }
+        }
+
+        if (! any)
+            return false;
+
+        if (s < end && (*s == 'e' || *s == 'E'))
+        {
+            const char* e = s + 1;
+            bool negativeExponent = false;
+
+            if (e < end && (*e == '+' || *e == '-'))
+                negativeExponent = (*e++ == '-');
+
+            if (e < end && isDigit (*e))
+            {
+                int exponent = 0;
+
+                for (; e < end && isDigit (*e); ++e)
+                    exponent = std::min (exponent * 10 + (*e - '0'), 100000);
+
+                scale += negativeExponent ? -exponent : exponent;
+                s = e;
+            }
+        }
+
+        double value = (double) mantissa;
+
+        if (mantissa != 0 && scale != 0)
+            value *= std::pow (10.0, (double) scale);
+
+        if (! std::isfinite (value))
+            return false;
+
+        out = negative ? -value : value;
+        p = s;
+        return true;
+    }
+
+    bool read (float& out) noexcept
+    {
+        const char* start = p;
+        double value = 0.0;
+
+        if (! read (value))
+            return false;
+
+        if (std::abs (value) > (double) std::numeric_limits<float>::max())
+        {
+            p = start;
+            return false;
+        }
+
+        out = (float) value;
         return true;
     }
 
