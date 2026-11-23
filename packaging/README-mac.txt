@@ -1,4 +1,4 @@
-LUMENWAKE 0.2.0
+LUMENWAKE 0.3.0
 An audio-reactive visualiser plugin for Mac. VST3 and Audio Unit.
 
 Put it on a track and the picture moves with whatever plays through it.
@@ -100,6 +100,12 @@ They are made for a logo or a 3D model on black.
 
 Each effect has an amount (all the way left is off) and a rate, from 8 bars
 down to 1/32.
+
+The square in front of each effect's name switches that effect on or off,
+and the On button beside EFFECTS switches all of them at once. A switch
+leaves the amount alone, so the effect comes back as it was set. In the host
+the switches are called "FX On", "FX Strobe On" and so on, and they automate
+as on/off steps.
 
 SYNC chooses the clock. "Host tempo" follows the host's tempo and bar
 position, so a 1/4 strobe lands on the beat. "Free" runs at the BPM set

@@ -60,6 +60,7 @@ public:
 private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
+    using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
     struct Row
     {
@@ -69,18 +70,21 @@ private:
         bool modelOnly = false;
     };
 
-    /** One effect: how much of it, and how long its cycle is. */
+    /** One effect: whether it is on, how much of it, and how long its cycle is. */
     struct FxRow
     {
+        juce::TextButton on;
         juce::Label label;
         juce::Slider slider;
         juce::ComboBox rate;
+        std::unique_ptr<ButtonAttachment> onAttachment;
         std::unique_ptr<SliderAttachment> amountAttachment;
         std::unique_ptr<ComboAttachment> rateAttachment;
     };
 
     void timerCallback() override;
     void setPage (int page);
+    void updateFxSwitches();
     void addRow (const juce::String& parameterId, const juce::String& name, bool modelOnly = false);
     void addHeading (juce::Label&, const juce::String& text);
     void updateSceneControls();
@@ -115,6 +119,8 @@ private:
     juce::Slider bpmSlider;
     std::unique_ptr<ComboAttachment> syncAttachment, colorModeAttachment;
     std::unique_ptr<SliderAttachment> bpmAttachment;
+    juce::TextButton fxOnButton;
+    std::unique_ptr<ButtonAttachment> fxOnAttachment;
     juce::OwnedArray<FxRow> fxRows;
 
     int shownScene = -1;

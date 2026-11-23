@@ -27,7 +27,7 @@ jobs:
       # the file permissions the app needs.
       - name: Zip
         run: |
-          pkg="Lumenwake 0.2.0 (Mac)"
+          pkg="Lumenwake 0.3.0 (Mac)"
           mkdir -p "$pkg"
           for name in Lumenwake.vst3 Lumenwake.component Lumenwake.app; do
             ditto "dist-mac/$name" "$pkg/$name"
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Lumenwake-mac
-          path: Lumenwake 0.2.0 (Mac).zip
+          path: Lumenwake 0.3.0 (Mac).zip
 
       # After the upload, so a failed check still leaves the build to download.
       - name: Check the Audio Unit

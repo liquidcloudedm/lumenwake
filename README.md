@@ -55,9 +55,13 @@ The **FX** page (button at the top of the panel) holds effects that are laid ove
 
 Each effect has an amount (0 is off) and a rate from 8 bars down to 1/32, with a bar counted as four quarter notes.
 
+**Switches.** The square in front of each effect's name turns that effect on or off, and the **On** button beside the EFFECTS heading turns all of them on or off at once. A switch does not touch the amount, so an effect comes back exactly as it was set. An effect that is off is shown dimmed and can still be adjusted. `docs/effect-switches.png` shows the page with Pulse and Color Shift switched off.
+
+The switches are host parameters like everything else: "FX On" for all the effects, and "FX Strobe On", "FX Pulse On" and so on for each one. In Live they automate as on/off steps, so a strobe can be cut in for one bar without drawing its amount up and down. All switches are on by default, so a project saved with an earlier version looks the same.
+
 **Sync** chooses the clock. With *Host tempo*, effects follow the host's tempo and bar position, so a quarter-note strobe lands on the beat; while the host is stopped they keep running at its tempo. With *Free*, they run at the BPM set beside it, whatever the host is doing. The standalone app has no host tempo and always uses the Free BPM.
 
-Every effect amount and rate, the sync choice, the free BPM and the color mode are host parameters, so all of it can be automated. Effects are applied after trails, so a strobe does not smear, and they are part of a recorded video: Strobe and Pulse make the picture transparent, not black.
+Every effect switch, amount and rate, the sync choice, the free BPM and the color mode are host parameters, so all of it can be automated. Effects are applied after trails, so a strobe does not smear, and they are part of a recorded video: Strobe and Pulse make the picture transparent, not black.
 
 For a logo that holds still under the effects, use the Image scene with Intensity at 0.
 
@@ -115,7 +119,7 @@ It fetches JUCE, builds `Lumenwake.vst3`, `Lumenwake.component` (the Audio Unit)
 
 Without a Mac, `.github/workflows/build.yml` does the same on GitHub's Mac machines: push the project to a GitHub repository, open Actions, run "Build plugins", and download `Lumenwake-mac` from the finished run.
 
-What has been checked on GitHub's Mac machines: all three build as universal binaries, the Audio Unit passes Apple's `auval`, the VST3 loads in the test host (`lw_hosttest`: pass-through, 41 parameters, state, editor), and the standalone app draws all 24 scenes and modes with no shader errors. The finished run holds a zip, `Lumenwake 0.2.0 (Mac).zip`, with the plugins, install notes (`packaging/README-mac.txt`) and licences. What has not been checked: the Mac build has not been used in Ableton Live or any other real host, by a person, on a real Mac, and recording has not been tried there.
+What has been checked on GitHub's Mac machines, for version 0.2.0: all three build as universal binaries, the Audio Unit passes Apple's `auval`, the VST3 loads in the test host (`lw_hosttest`: pass-through, parameters, state, editor), and the standalone app draws all 24 scenes and modes with no shader errors. The finished run holds a zip, `Lumenwake <version> (Mac).zip`, with the plugins, install notes (`packaging/README-mac.txt`) and licences. What has not been checked: the Mac build has not been used in Ableton Live or any other real host, by a person, on a real Mac, and recording has not been tried there. The effect switches added in 0.3.0 have been built and tested on Windows; run "Build plugins" again to repeat the Mac checks with them.
 
 Giving a Mac build to other people: macOS blocks plugins that are not signed with an Apple Developer ID and notarised (Apple Developer Program, paid yearly). Without that, each person has to clear the block once after copying the plugin, in Terminal:
 
@@ -131,7 +135,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/Lumenwake.com
 Tests (`-DLUMENWAKE_BUILD_TESTS=ON`):
 
 - `lw_modeltest file...` runs the model loaders and prints triangle counts.
-- `lw_hosttest path\to\Lumenwake.vst3` loads the plugin the way a DAW does and checks pass-through, parameters, state and the editor. Add `--record 5` with the environment variables `LUMENWAKE_AUTOREC=1` and `LUMENWAKE_REC_DIR=<folder>` set, and it also plays the host transport (stopped, playing for 5 seconds, stopped) and checks that exactly one video appears.
+- `lw_hosttest path\to\Lumenwake.vst3` loads the plugin the way a DAW does and checks pass-through, parameters, the effect switches, state and the editor. Add `--record 5` with the environment variables `LUMENWAKE_AUTOREC=1` and `LUMENWAKE_REC_DIR=<folder>` set, and it also plays the host transport (stopped, playing for 5 seconds, stopped) and checks that exactly one video appears. Parameters can be set for the take by name, with values from 0 to 1: `--record 5 "FX Strobe=1" "FX Strobe On=0"` records a take that must not strobe.
 - `lw_rectest out.mov frames.raw audio.raw` writes a test clip with the video writer plus the raw frames and sound that went in. Decoding the clip with ffmpeg (`-f rawvideo -pix_fmt argb`) must give back `frames.raw` byte for byte.
 - Setting the environment variable `LUMENWAKE_DUMP` to a folder and starting the standalone renders every scene and mode to PNG with a synthetic drum loop. `docs/sheet*.jpg` are from that run. With `LUMENWAKE_DUMP_ONLY=fx` it renders each effect instead, on the Image scene and on the model; `docs/effects.jpg` is from that run, on an all-white logo.
 

@@ -19,8 +19,9 @@ enum Scene
     numScenes
 };
 
-/** Effects laid over whatever the scene draws. Each has an amount and a rate
-    parameter, and runs in time with the host tempo or a tempo of its own. */
+/** Effects laid over whatever the scene draws. Each has an on/off switch, an
+    amount and a rate parameter, and runs in time with the host tempo or a tempo
+    of its own. */
 enum Fx
 {
     fxStrobe = 0,
@@ -96,7 +97,8 @@ public:
     bool isModelLoading() const noexcept                     { return modelLoading.load(); }
 
     //==========================================================================
-    // Effects. Parameter ids are fxIds[i] for the amount and fxIds[i] + "Rate".
+    // Effects. Parameter ids are fxIds[i] for the amount, fxIds[i] + "Rate" and
+    // fxIds[i] + "On" for the switch; "fxOn" switches all of them.
     static const juce::StringArray fxNames, fxIds, fxRateNames, fxSyncNames, fxColorModeNames;
     static double fxRateBeats (int rateIndex) noexcept;
 

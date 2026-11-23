@@ -59,6 +59,28 @@ void LumenwakeLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, in
 
 void LumenwakeLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button, const juce::Colour&, bool highlighted, bool down)
 {
+    // An effect's on/off switch: a small square, filled in when the effect is on.
+    if (button.getProperties().contains ("switch"))
+    {
+        const auto box = button.getLocalBounds().toFloat().withSizeKeepingCentre (12.0f, 12.0f);
+        const bool on = button.getToggleState();
+        auto colour = on ? accent : control;
+
+        if (down)             colour = colour.darker (0.2f);
+        else if (highlighted) colour = colour.brighter (on ? 0.25f : 0.5f);
+
+        g.setColour (colour);
+        g.fillRoundedRectangle (box, 3.0f);
+
+        if (! on)
+        {
+            g.setColour (dimText.withAlpha (0.7f));
+            g.drawRoundedRectangle (box.reduced (0.5f), 3.0f, 1.0f);
+        }
+
+        return;
+    }
+
     // A button that is "on" is filled in: red for recording, amber for the page showing.
     const bool danger = (bool) button.getProperties().getWithDefault ("danger", false);
     const juce::Colour base = ! button.getToggleState() ? control
@@ -96,7 +118,7 @@ juce::Font LumenwakeLookAndFeel::getLabelFont (juce::Label& label)          { re
 //==============================================================================
 namespace
 {
-    constexpr int panelWidth = 252;
+    constexpr int panelWidth = 268;
     constexpr int minWidth = 520, minHeight = 680;
 }
 
@@ -221,6 +243,12 @@ LumenwakeEditor::LumenwakeEditor (LumenwakeProcessor& p)
     bpmSlider.setNumDecimalPlacesToDisplay (1);
     bpmSlider.updateText();
 
+    fxOnButton.setClickingTogglesState (true);
+    fxOnButton.setTooltip ("Turns all the effects on or off at once. Each effect keeps its own switch and amount.");
+    fxOnButton.onStateChange = [this] { updateFxSwitches(); };
+    panel.addAndMakeVisible (fxOnButton);
+    fxOnAttachment = std::make_unique<ButtonAttachment> (processor.apvts, "fxOn", fxOnButton);
+
     static const char* const fxTips[numFx] =
     {
         "Cuts the picture in and out",
@@ -239,6 +267,12 @@ LumenwakeEditor::LumenwakeEditor (LumenwakeProcessor& p)
     {
         auto* row = fxRows.add (new FxRow());
 
+        row->on.getProperties().set ("switch", true);
+        row->on.setClickingTogglesState (true);
+        row->on.setTooltip ("Turns " + LumenwakeProcessor::fxNames[i] + " on or off. Its amount is kept.");
+        row->on.onStateChange = [this] { updateFxSwitches(); };
+        panel.addAndMakeVisible (row->on);
+
         row->label.setText (LumenwakeProcessor::fxNames[i], juce::dontSendNotification);
         row->label.setFont (juce::Font (juce::FontOptions (13.0f)));
         row->label.setMinimumHorizontalScale (1.0f);
@@ -255,6 +289,7 @@ LumenwakeEditor::LumenwakeEditor (LumenwakeProcessor& p)
         row->rate.setTooltip ("Length of one cycle");
         panel.addAndMakeVisible (row->rate);
 
+        row->onAttachment = std::make_unique<ButtonAttachment> (processor.apvts, LumenwakeProcessor::fxIds[i] + "On", row->on);
         row->amountAttachment = std::make_unique<SliderAttachment> (processor.apvts, LumenwakeProcessor::fxIds[i], row->slider);
         row->rateAttachment = std::make_unique<ComboAttachment> (processor.apvts, LumenwakeProcessor::fxIds[i] + "Rate", row->rate);
     }
@@ -268,6 +303,7 @@ LumenwakeEditor::LumenwakeEditor (LumenwakeProcessor& p)
     colorModeBox.setTooltip ("Cycle: glide through the colours over each cycle. Step: jump to a new colour at the start of each cycle.");
     panel.addAndMakeVisible (colorModeBox);
     colorModeAttachment = std::make_unique<ComboAttachment> (processor.apvts, "fxColorMode", colorModeBox);
+    updateFxSwitches();
 
     addRow ("sensitivity", "Sensitivity");
     addRow ("smoothing", "Smoothing");
@@ -468,9 +504,11 @@ void LumenwakeEditor::updateSceneControls()
     bpmSlider.setVisible (! main);
     colorModeLabel.setVisible (! main);
     colorModeBox.setVisible (! main);
+    fxOnButton.setVisible (! main);
 
     for (auto* row : fxRows)
     {
+        row->on.setVisible (! main);
         row->label.setVisible (! main);
         row->slider.setVisible (! main);
         row->rate.setVisible (! main);
@@ -484,6 +522,23 @@ void LumenwakeEditor::setPage (int page)
 {
     processor.panelPage = page;
     updateSceneControls();
+}
+
+void LumenwakeEditor::updateFxSwitches()
+{
+    // Called whenever a switch changes, by a click or by the host's automation.
+    const bool allOn = fxOnButton.getToggleState();
+    fxOnButton.setButtonText (allOn ? "On" : "Off");
+
+    // An effect that is off is shown dimmed. It can still be set up while off.
+    for (auto* row : fxRows)
+    {
+        const bool on = allOn && row->on.getToggleState();
+        row->label.setColour (juce::Label::textColourId, on ? LumenwakeLookAndFeel::text : LumenwakeLookAndFeel::dimText);
+        row->slider.setAlpha (on ? 1.0f : 0.4f);
+        row->rate.setAlpha (on ? 1.0f : 0.4f);
+        row->on.setAlpha (allOn ? 1.0f : 0.4f);
+    }
 }
 
 void LumenwakeEditor::updateHint()
@@ -581,20 +636,27 @@ void LumenwakeEditor::resized()
         bpmSlider.setBounds (syncRow);
         r.removeFromTop (12);
 
-        effectsHeading.setBounds (r.removeFromTop (15));
-        r.removeFromTop (3);
+        auto headingRow = r.removeFromTop (22);
+        fxOnButton.setBounds (headingRow.removeFromRight (42));
+        effectsHeading.setBounds (headingRow.removeFromBottom (15));
+        r.removeFromTop (4);
+
+        const int switchWidth = 16;
 
         for (int i = 0; i < fxRows.size(); ++i)
         {
             auto line = r.removeFromTop (26);
+            fxRows[i]->on.setBounds (line.removeFromLeft (switchWidth));
+            line.removeFromLeft (gap);
             fxRows[i]->rate.setBounds (line.removeFromRight (66).reduced (0, 2));
             line.removeFromRight (gap);
-            fxRows[i]->label.setBounds (line.removeFromLeft (86));
+            fxRows[i]->label.setBounds (line.removeFromLeft (82));
             fxRows[i]->slider.setBounds (line);
 
             if (i == fxColor)
             {
                 auto modeLine = r.removeFromTop (26);
+                modeLine.removeFromLeft (switchWidth + gap);
                 colorModeBox.setBounds (modeLine.removeFromRight (66).reduced (0, 2));
                 colorModeLabel.setBounds (modeLine);
             }
@@ -736,7 +798,7 @@ void LumenwakeEditor::timerCallback()
                 stream->setPosition (0);
                 stream->truncate();
                 juce::PNGImageFormat png;
-                png.writeImageToStream (panel.createComponentSnapshot (panel.getLocalBounds()), *stream);
+                png.writeImageToStream (createComponentSnapshot (panel.getBounds()), *stream);
             }
         }
     }

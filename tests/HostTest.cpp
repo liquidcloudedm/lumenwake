@@ -1,7 +1,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <iostream>
 
-// Usage: lw_hosttest path/to/Lumenwake.vst3 [--record seconds [parameterIndex=value ...]]
+// Usage: lw_hosttest path/to/Lumenwake.vst3 [--record seconds [parameter=value ...]]
+// where a parameter is its index or its name ("FX Strobe On=0") and the value is 0 to 1.
 // Loads the plugin as a VST3 host would and checks the basics.
 //
 // With --record it also plays the part of the host transport: stopped, then
@@ -117,6 +118,39 @@ int main (int argc, char* argv[])
     const auto& params = instance->getParameters();
     check (params.size() >= 17, "parameters exposed for automation: " + juce::String (params.size()));
 
+    // The effect switches: one for all of them and one each. A host shows a
+    // two-step parameter as an on/off switch in its automation.
+    {
+        int switches = 0, onByDefault = 0;
+        juce::AudioProcessorParameter* allOn = nullptr;
+
+        for (auto* p : params)
+        {
+            const auto name = p->getName (64);
+
+            if (! name.startsWith ("FX ") || ! name.endsWith (" On") || p->getNumSteps() != 2 || ! p->isAutomatable())
+                continue;
+
+            ++switches;
+            onByDefault += p->getDefaultValue() >= 0.5f ? 1 : 0;
+
+            if (name == "FX On")
+                allOn = p;
+        }
+
+        check (switches == 11 && allOn != nullptr, "effect on/off switches exposed for automation: " + juce::String (switches));
+        check (onByDefault == switches, "effect switches are on by default");
+
+        if (allOn != nullptr)
+        {
+            allOn->setValueNotifyingHost (0.0f);
+            const auto offText = allOn->getCurrentValueAsText();
+            const bool wentOff = allOn->getValue() < 0.5f;
+            allOn->setValueNotifyingHost (1.0f);
+            check (wentOff && allOn->getValue() >= 0.5f, "FX On switches off and on again (reads '" + offText + "' when off)");
+        }
+    }
+
     // State round trip
     juce::MemoryBlock state;
     params[4]->setValueNotifyingHost (0.123f);
@@ -157,10 +191,24 @@ int main (int argc, char* argv[])
         for (int i = 4; i < argc; ++i)
         {
             const auto setting = juce::String (argv[i]);
-            const int index = setting.upToFirstOccurrenceOf ("=", false, false).getIntValue();
+            const auto key = setting.upToFirstOccurrenceOf ("=", false, false);
+            int index = key.containsOnly ("0123456789") ? key.getIntValue() : -1;
+
+            // A parameter can be given by its name too, as the host shows it.
+            for (int p = 0; index < 0 && p < params.size(); ++p)
+                if (params[p]->getName (64) == key)
+                    index = p;
 
             if (juce::isPositiveAndBelow (index, params.size()))
+            {
                 params[index]->setValueNotifyingHost (setting.fromFirstOccurrenceOf ("=", false, false).getFloatValue());
+                std::cout << "        set " << index << " " << params[index]->getName (64) << " = "
+                          << params[index]->getCurrentValueAsText() << std::endl;
+            }
+            else
+            {
+                check (false, "no parameter called " + key);
+            }
         }
 
         TestPlayHead head;

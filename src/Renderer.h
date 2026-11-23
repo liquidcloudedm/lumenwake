@@ -78,6 +78,8 @@ private:
     std::atomic<float>* pFxColorMode = nullptr;
     std::atomic<float>* pFx[numFx] = {};
     std::atomic<float>* pFxRate[numFx] = {};
+    std::atomic<float>* pFxOn = nullptr;
+    std::atomic<float>* pFxSwitch[numFx] = {};
     double fxBeats = 0.0;
 
     std::atomic<int> viewWidth { 0 }, viewHeight { 0 };
