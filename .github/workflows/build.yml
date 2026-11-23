@@ -1,0 +1,74 @@
+# Builds Lumenwake for Mac and Windows on GitHub's machines, so a Mac build
+# can be made without owning a Mac. Push this project to a GitHub repository,
+# open the Actions tab, pick "Build plugins" and press "Run workflow". The
+# plugins are attached to the finished run as downloadable zips.
+name: Build plugins
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+env:
+  JUCE_TAG: 9.0.6
+
+jobs:
+  mac:
+    name: Mac (VST3, AU, standalone)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: bash build-mac.sh
+
+      - name: Zip
+        run: |
+          cp README.md dist-mac/
+          ditto -c -k --keepParent dist-mac Lumenwake-mac.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lumenwake-mac
+          path: Lumenwake-mac.zip
+
+      # After the upload, so a failed check still leaves the build to download.
+      - name: Check the Audio Unit
+        run: |
+          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+          ditto dist-mac/Lumenwake.component "$HOME/Library/Audio/Plug-Ins/Components/Lumenwake.component"
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -v aufx Lmw1 Lmwk
+
+  windows:
+    name: Windows (VST3, standalone)
+    # Only for a version tag: a run started by hand builds the Mac plugins alone.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch JUCE
+        shell: bash
+        run: |
+          if [ ! -f libs/JUCE/CMakeLists.txt ]; then
+            git clone --depth 1 --branch "$JUCE_TAG" https://github.com/juce-framework/JUCE.git libs/JUCE
+          fi
+
+      - name: Build
+        shell: bash
+        run: |
+          cmake -S . -B build -A x64 -DLUMENWAKE_BUILD_TESTS=ON
+          cmake --build build --config Release --target Lumenwake_VST3 Lumenwake_Standalone lw_hosttest
+
+      - name: Load the plugin in a test host
+        shell: bash
+        run: build/lw_hosttest_artefacts/Release/lw_hosttest.exe "build/Lumenwake_artefacts/Release/VST3/Lumenwake.vst3"
+        continue-on-error: true      # the hosted machines have no graphics card, so the window may not open
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lumenwake-windows
+          path: |
+            build/Lumenwake_artefacts/Release/VST3/Lumenwake.vst3
+            build/Lumenwake_artefacts/Release/Standalone/Lumenwake.exe

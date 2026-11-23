@@ -1,0 +1,8 @@
+# JUCE is fetched by the build scripts rather than stored here.
+libs/JUCE/
+
+# Build output
+build/
+build-*/
+dist/
+dist-mac/
