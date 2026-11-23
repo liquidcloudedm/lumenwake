@@ -1,0 +1,50 @@
+Lumenwake includes the following third-party software.
+
+JUCE 9 (https://juce.com)
+    Plugin framework, used under the JUCE 9 End User Licence Agreement.
+    See JUCE.txt.
+
+VST3 SDK 3.8, Copyright (c) 2025 Steinberg Media Technologies GmbH
+    MIT License. See "VST3 SDK.txt".
+    VST is a registered trademark of Steinberg Media Technologies GmbH.
+
+ufbx (https://github.com/ufbx/ufbx), Copyright (c) 2020 Samuli Raivio
+    FBX loading. MIT License, text below.
+
+cgltf (https://github.com/jkuhlmann/cgltf), Copyright (c) 2018-2021 Johannes Kuhlmann
+    glTF loading. MIT License, text below.
+
+Bundled with JUCE and compiled into the plugin:
+
+    zlib                 see zlib.txt
+    libpng               see libpng.txt
+    libwebp              see libwebp.txt and "libwebp patents.txt"
+    HarfBuzz             see HarfBuzz.txt
+    SheenBidi            see SheenBidi.txt
+    LunaSVG, PlutoVG     see LunaSVG.txt and PlutoVG.txt
+    FLAC                 see FLAC.txt
+    libogg, libvorbis    see libogg.txt and libvorbis.txt
+    Opus                 see Opus.txt
+    libjpeg              This software is based in part on the work of the
+                         Independent JPEG Group.
+
+
+MIT License (applies to ufbx and cgltf, each under its own copyright above)
+---------------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

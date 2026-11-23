@@ -22,15 +22,26 @@ jobs:
       - name: Build
         run: bash build-mac.sh
 
+      # The package to hand to people: plugins, install notes and licences.
+      # Zipped here with ditto, because the upload below would otherwise drop
+      # the file permissions the app needs.
       - name: Zip
         run: |
-          cp README.md dist-mac/
-          ditto -c -k --keepParent dist-mac Lumenwake-mac.zip
+          pkg="Lumenwake 0.2.0 (Mac)"
+          mkdir -p "$pkg"
+          for name in Lumenwake.vst3 Lumenwake.component Lumenwake.app; do
+            ditto "dist-mac/$name" "$pkg/$name"
+          done
+          cp packaging/README-mac.txt "$pkg/README.txt"
+          cp -R packaging/Licences "$pkg/Licences"
+          codesign --verify --deep --strict "$pkg/Lumenwake.vst3" "$pkg/Lumenwake.component" "$pkg/Lumenwake.app"
+          ditto -c -k --keepParent "$pkg" "$pkg.zip"
+          ls -l "$pkg" "$pkg.zip"
 
       - uses: actions/upload-artifact@v4
         with:
           name: Lumenwake-mac
-          path: Lumenwake-mac.zip
+          path: Lumenwake 0.2.0 (Mac).zip
 
       # After the upload, so a failed check still leaves the build to download.
       - name: Check the Audio Unit
