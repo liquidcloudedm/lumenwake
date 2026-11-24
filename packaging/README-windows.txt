@@ -1,4 +1,4 @@
-LUMENWAKE 0.3.0
+LUMENWAKE 0.3.1
 An audio-reactive visualiser plugin. VST3, Windows 64-bit.
 
 Put it on a track and the picture moves with whatever plays through it.
@@ -110,6 +110,12 @@ RECORDING A TRANSPARENT VIDEO
 The file is a QuickTime .mov with an alpha channel (Animation codec,
 lossless), with the audio included. Black is transparent, so the clip can be
 laid over other footage in a video editor. Effects are part of the video.
+
+The colour is stored as it looks on black (premultiplied alpha), so the
+clip also plays correctly in an ordinary media player. If a glow looks too
+dark once the clip is laid over other footage, set the clip's alpha type to
+"premultiplied" in your editor (Premiere Pro: Interpret Footage. DaVinci
+Resolve: Clip Attributes).
 
 Keep the Lumenwake window open while recording. The files are large: from
 about 1.6 GB a minute to about 10 GB a minute at 1080p 30, depending on the

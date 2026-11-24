@@ -77,7 +77,8 @@ The standalone app has no transport, so there Record starts at once and Stop end
 
 What is in the file:
 
-- QuickTime `.mov`, Animation codec, lossless, 32 bits per pixel with a straight alpha channel. Premiere Pro, After Effects, DaVinci Resolve, Final Cut and ffmpeg read it with the transparency intact.
+- QuickTime `.mov`, Animation codec, lossless, 32 bits per pixel with an alpha channel. Premiere Pro, After Effects, DaVinci Resolve, Final Cut and ffmpeg read it with the transparency intact.
+- The colour is stored as the picture looks over black (premultiplied alpha), so the file also looks right in a player that ignores transparency. An editor that treats the alpha as straight shows glows darker than they should be: set the clip's alpha type to premultiplied there (Premiere Pro: Interpret Footage; DaVinci Resolve: Clip Attributes; ffmpeg: `overlay=alpha=premultiplied`). Up to 0.3.0 the alpha was straight, and such a file shows a solid block of colour wherever the alpha is ignored or read as premultiplied.
 - The audio that passed through the plugin, 16-bit stereo, lined up with the picture. Sample rates above 48 kHz are halved or quartered for the sound track.
 - Black is transparent and light is as opaque as it is bright, so glows and trails blend over whatever is underneath. In the Model 3D scene the Chrome, Shatter and Iridescent surfaces stay solid, and the dark backdrop behind the model is left out.
 

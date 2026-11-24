@@ -2,6 +2,12 @@
 
 Each version's section becomes the notes of its GitHub release, so write it for the people who use the plugin.
 
+## 0.3.1
+
+- Fixed recordings that showed a solid block of colour around the picture in place of its glow. Media players, and editors that read the clip's transparency as premultiplied, showed the block; the logo or scene itself was hidden under it.
+- The video now stores the picture as it looks on black, with the transparency beside it (premultiplied alpha). It plays correctly in an ordinary player and overlays correctly in an editor.
+- If a glow looks too dark over other footage, set the clip's alpha type to "premultiplied" in the editor.
+
 ## 0.3.0
 
 - Every effect on the FX page has an on/off switch, and an On button beside the EFFECTS heading switches all of them at once.
