@@ -13,8 +13,9 @@
     sound track. Video editors read the alpha channel directly, so the clip can
     be laid over other footage.
 
-    Pixels are four bytes each in the order alpha, red, green, blue, with
-    straight (not premultiplied) alpha and the top row first. */
+    Pixels are four bytes each in the order alpha, red, green, blue, top row
+    first. The writer stores them as given; the renderer supplies colour that
+    is premultiplied by the alpha, the picture as it looks over black. */
 class MovWriter
 {
 public:

@@ -177,8 +177,13 @@ void main()
 
         if (uOutput == 2)
         {
-            // Straight alpha, written so the bytes land as alpha, red, green, blue.
-            fragColor = a < 0.006 ? vec4(0.0) : vec4(a, clamp(c / a, 0.0, 1.0));
+            // The colour goes in as it looks over black (premultiplied alpha),
+            // so the file also reads correctly where the alpha channel is
+            // ignored. Dividing the colour by the alpha instead (straight
+            // alpha) leaves a glow as a flat block of colour for any player
+            // or editor that does not apply the alpha in exactly that way.
+            // The bytes land as alpha, red, green, blue.
+            fragColor = vec4(a, clamp(c, 0.0, 1.0));
             return;
         }
 

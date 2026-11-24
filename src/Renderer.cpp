@@ -163,7 +163,10 @@ VisualRenderer::VisualRenderer (LumenwakeProcessor& p, juce::Component& t)
     {
         pFx[i] = v.getRawParameterValue (LumenwakeProcessor::fxIds[i]);
         pFxRate[i] = v.getRawParameterValue (LumenwakeProcessor::fxIds[i] + "Rate");
+        pFxSwitch[i] = v.getRawParameterValue (LumenwakeProcessor::fxIds[i] + "On");
     }
+
+    pFxOn = v.getRawParameterValue ("fxOn");
 
     const auto dumpPath = juce::SystemStats::getEnvironmentVariable ("LUMENWAKE_DUMP", {});
 
@@ -945,9 +948,15 @@ void VisualRenderer::updateEffects (Frame& f, float dt)
     float amount[numFx];
     int rate[numFx];
 
+    // An effect that is switched off, by its own switch or the one for all of
+    // them, draws as if its amount were zero. The amount itself is left alone,
+    // so switching it back on brings it back as it was.
+    const bool allOn = pFxOn->load() >= 0.5f;
+
     for (int i = 0; i < numFx; ++i)
     {
-        amount[i] = dumping ? 0.0f : pFx[i]->load();
+        const bool on = allOn && pFxSwitch[i]->load() >= 0.5f;
+        amount[i] = dumping || ! on ? 0.0f : pFx[i]->load();
         rate[i] = juce::roundToInt (pFxRate[i]->load());
     }
 

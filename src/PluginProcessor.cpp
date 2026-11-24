@@ -55,6 +55,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout LumenwakeProcessor::createLa
 
     layout.add (std::make_unique<Choice> (id ("fxColorMode"), "FX Color Mode", fxColorModeNames, 0));
 
+    // On/off switches: one for all the effects and one for each. They are on by
+    // default, so a project saved before they existed looks the same. The
+    // version hint of 2 keeps them after the older parameters in an Audio Unit.
+    layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { "fxOn", 2 }, "FX On", true));
+
+    for (int i = 0; i < numFx; ++i)
+        layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { fxIds[i] + "On", 2 }, "FX " + fxNames[i] + " On", true));
+
     return layout;
 }
 
